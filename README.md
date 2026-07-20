@@ -1,5 +1,9 @@
 # GoodWe Gateway
+# GoodWe Gateway
 
+## Current stable firmware
+
+goodwe-tuinhuis-v4.4.1.yaml
 ESPHome gateway voor GoodWe omvormers.
 
 ## Hardware
