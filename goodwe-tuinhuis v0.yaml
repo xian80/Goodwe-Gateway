@@ -1,0 +1,30 @@
+esphome:
+  name: goodwe-tuinhuis
+
+esp32:
+  board: esp32dev
+  framework:
+    type: arduino
+
+# Enable logging
+logger:
+
+# Enable Home Assistant API
+api:
+  password: ""
+
+ota:
+  - platform: esphome
+    password: ""
+
+wifi:
+  ssid: "Nova"
+  password: "Jolie2012"
+
+  # Enable fallback hotspot (captive portal) in case wifi connection fails
+  ap:
+    ssid: "Goodwe-Tuinhuis Fallback Hotspot"
+    password: "1m5CtEmNuPXv"
+
+captive_portal:
+    

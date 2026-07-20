@@ -1,0 +1,67 @@
+esphome:
+  name: goodwe-tuinhuis
+
+esp32:
+  board: esp32dev
+  framework:
+    type: arduino
+
+logger:
+
+api:
+  password: ""
+
+ota:
+  - platform: esphome
+    password: ""
+
+wifi:
+  ssid: "Nova"
+  password: "Jolie2012"
+
+  ap:
+    ssid: "Goodwe-Tuinhuis Fallback Hotspot"
+    password: "1m5CtEmNuPXv"
+
+captive_portal:
+
+uart:
+  id: uart_goodwe
+  tx_pin: GPIO17
+  rx_pin: GPIO16
+  baud_rate: 9600
+  parity: NONE
+  stop_bits: 1
+
+modbus:
+  id: modbus_goodwe
+  uart_id: uart_goodwe
+  flow_control_pin: GPIO4
+
+modbus_controller:
+  - id: goodwe
+    address: 247
+    modbus_id: modbus_goodwe
+    update_interval: 5s
+
+sensor:
+  - platform: modbus_controller
+    modbus_controller_id: goodwe
+    id: work_mode
+    name: "GoodWe Work Mode"
+    register_type: holding
+    address: 564
+    value_type: U_WORD
+
+  - platform: modbus_controller
+    modbus_controller_id: goodwe
+    id: inverter_temperature
+    name: "GoodWe Inverter Temperature"
+    register_type: holding
+    address: 565
+    value_type: U_WORD
+    unit_of_measurement: "°C"
+    device_class: temperature
+    state_class: measurement
+    filters:
+      - multiply: 0.1

@@ -1,0 +1,188 @@
+############################################################
+# GoodWe ESPHome Monitor
+# Version : 4.2
+# Date    : 2026-07-16
+#
+# Changelog
+# - Added status text sensor
+# - Added PV/AC live sensors
+# - Added Today Energy
+#
+# TODO
+# - Added web_server v3
+# - Total Energy (32-bit)
+# - Runtime (32-bit)
+# - Device Type
+# - Serial Number
+# - Smart polling
+############################################################
+
+esphome:
+  name: goodwe-tuinhuis
+
+esp32:
+  board: esp32dev
+  framework:
+    type: arduino
+
+logger:
+
+api:
+  password: ""
+
+ota:
+  - platform: esphome
+    password: ""
+
+wifi:
+  ssid: "Nova"
+  password: "Jolie2012"
+
+  ap:
+    ssid: "Goodwe-Tuinhuis Fallback Hotspot"
+    password: "1m5CtEmNuPXv"
+
+captive_portal:
+
+web_server:
+  port: 80
+  version: 3
+
+uart:
+  id: uart_goodwe
+  tx_pin: GPIO17
+  rx_pin: GPIO16
+  baud_rate: 9600
+  parity: NONE
+  stop_bits: 1
+
+modbus:
+  id: modbus_goodwe
+  uart_id: uart_goodwe
+  flow_control_pin: GPIO4
+
+modbus_controller:
+  - id: goodwe
+    address: 247
+    modbus_id: modbus_goodwe
+    update_interval: 5s
+
+sensor:
+  - platform: modbus_controller
+    modbus_controller_id: goodwe
+    id: work_mode
+    name: "GoodWe Work Mode"
+    register_type: holding
+    address: 564
+    value_type: U_WORD
+
+  - platform: modbus_controller
+    modbus_controller_id: goodwe
+    id: inverter_temperature
+    name: "GoodWe Inverter Temperature"
+    register_type: holding
+    address: 565
+    value_type: U_WORD
+    unit_of_measurement: "°C"
+    device_class: temperature
+    state_class: measurement
+    filters:
+      - multiply: 0.1
+  # Register 550 - PV Voltage
+  - platform: modbus_controller
+    modbus_controller_id: goodwe
+    id: pv_voltage
+    name: "GoodWe PV Voltage"
+    register_type: holding
+    address: 550
+    value_type: U_WORD
+    unit_of_measurement: "V"
+    accuracy_decimals: 1
+    filters:
+      - multiply: 0.1
+
+  # Register 552 - PV Current
+  - platform: modbus_controller
+    modbus_controller_id: goodwe
+    id: pv_current
+    name: "GoodWe PV Current"
+    register_type: holding
+    address: 552
+    value_type: U_WORD
+    unit_of_measurement: "A"
+    accuracy_decimals: 1
+    filters:
+      - multiply: 0.1
+
+  # Register 554 - Grid Voltage
+  - platform: modbus_controller
+    modbus_controller_id: goodwe
+    id: grid_voltage
+    name: "GoodWe Grid Voltage"
+    register_type: holding
+    address: 554
+    value_type: U_WORD
+    unit_of_measurement: "V"
+    accuracy_decimals: 1
+    filters:
+      - multiply: 0.1
+
+  # Register 557 - Grid Current
+  - platform: modbus_controller
+    modbus_controller_id: goodwe
+    id: grid_current
+    name: "GoodWe Grid Current"
+    register_type: holding
+    address: 557
+    value_type: U_WORD
+    unit_of_measurement: "A"
+    accuracy_decimals: 1
+    filters:
+      - multiply: 0.1
+
+  # Register 560 - Grid Frequency
+  - platform: modbus_controller
+    modbus_controller_id: goodwe
+    id: grid_frequency
+    name: "GoodWe Grid Frequency"
+    register_type: holding
+    address: 560
+    value_type: U_WORD
+    unit_of_measurement: "Hz"
+    accuracy_decimals: 2
+    filters:
+      - multiply: 0.01
+
+  # Register 563 - Output Power
+  - platform: modbus_controller
+    modbus_controller_id: goodwe
+    id: output_power
+    name: "GoodWe Output Power"
+    register_type: holding
+    address: 563
+    value_type: U_WORD
+    unit_of_measurement: "W"
+
+  # Register 566 - Today Energy
+  - platform: modbus_controller
+    modbus_controller_id: goodwe
+    id: today_energy
+    name: "GoodWe Today Energy"
+    register_type: holding
+    address: 566
+    value_type: U_WORD
+    unit_of_measurement: "kWh"
+    accuracy_decimals: 1
+    filters:
+      - multiply: 0.1
+
+
+
+text_sensor:
+  - platform: template
+    name: "GoodWe Status"
+    lambda: |-
+      if (id(work_mode).state == 0) return {"Waiting"};
+      if (id(work_mode).state == 1) return {"Running"};
+      if (id(work_mode).state == 2) return {"Fault"};
+      return {"Offline"};
