@@ -1,0 +1,430 @@
+############################################################
+# GoodWe ESPHome Monitor
+# Version 4.7.1
+# Date    : 2026-07-20
+############################################################
+esphome:
+  name: goodwe-gw2000
+
+esp32:
+  board: esp32dev
+  framework:
+    type: arduino
+
+logger:
+
+api:
+  encryption:
+    key: "f7hHxwqkiWRgc9siYsWbe2e0Vb8c8zeieGRvCWtb7Ho="
+  on_client_connected:
+    then:
+      - logger.log: "API client verbonden."
+      - lambda: |-
+          id(api_client_connected) = true;
+  on_client_disconnected:
+    then:
+      - logger.log: "API client verbroken."
+      - lambda: |-
+          id(api_client_connected) = false;
+
+ota:
+  - platform: esphome
+
+wifi:
+  ssid: "Nova"
+  password: "Jolie2012"
+  ap:
+    ssid: "Goodwe-Tuinhuis Fallback Hotspot"
+    password: "1m5CtEmNuPXv"
+
+captive_portal:
+
+globals:
+  - id: last_goodwe_modbus_response
+    type: uint32_t
+    restore_value: no
+    initial_value: '0'
+  - id: api_client_connected
+    type: bool
+    restore_value: no
+    initial_value: 'false'
+
+interval:
+  - interval: 1s
+    then:
+      - component.update: inverter_status
+
+script:
+  - id: reset_goodwe_modbus_watchdog
+    mode: restart
+    then:
+      - lambda: |-
+          id(last_goodwe_modbus_response) = millis();
+      - component.update: inverter_status
+
+web_server:
+  port: 80
+  version: 3
+
+uart:
+  id: uart_goodwe
+  tx_pin: GPIO17
+  rx_pin: GPIO16
+  baud_rate: 9600
+  parity: NONE
+  stop_bits: 1
+
+modbus:
+  id: modbus_goodwe
+  uart_id: uart_goodwe
+  flow_control_pin: GPIO4
+
+modbus_controller:
+  - id: goodwe
+    address: 247
+    modbus_id: modbus_goodwe
+    update_interval: 5s
+
+sensor:
+  - platform: modbus_controller
+    modbus_controller_id: goodwe
+    id: work_mode
+    name: "GoodWe Work Mode"
+    internal: true
+    register_type: holding
+    address: 564
+    value_type: U_WORD
+    on_value:
+      then:
+        - script.execute: reset_goodwe_modbus_watchdog
+
+  - platform: modbus_controller
+    modbus_controller_id: goodwe
+    id: pv_voltage
+    name: "GoodWe PV Voltage"
+    web_server:
+      sorting_weight: 20
+    register_type: holding
+    address: 550
+    value_type: U_WORD
+    on_value:
+      then:
+        - script.execute: reset_goodwe_modbus_watchdog
+    unit_of_measurement: "V"
+    accuracy_decimals: 1
+    filters:
+      - multiply: 0.1
+
+  - platform: modbus_controller
+    modbus_controller_id: goodwe
+    id: pv_current
+    name: "GoodWe PV Current"
+    web_server:
+      sorting_weight: 21
+    register_type: holding
+    address: 552
+    value_type: U_WORD
+    on_value:
+      then:
+        - script.execute: reset_goodwe_modbus_watchdog
+    unit_of_measurement: "A"
+    accuracy_decimals: 1
+    filters:
+      - multiply: 0.1
+
+  - platform: modbus_controller
+    modbus_controller_id: goodwe
+    id: grid_voltage
+    name: "GoodWe Grid Voltage"
+    web_server:
+      sorting_weight: 22
+    register_type: holding
+    address: 554
+    value_type: U_WORD
+    on_value:
+      then:
+        - script.execute: reset_goodwe_modbus_watchdog
+    unit_of_measurement: "V"
+    accuracy_decimals: 1
+    filters:
+      - multiply: 0.1
+
+  - platform: modbus_controller
+    modbus_controller_id: goodwe
+    id: grid_current
+    name: "GoodWe Grid Current"
+    web_server:
+      sorting_weight: 23
+    register_type: holding
+    address: 557
+    value_type: U_WORD
+    on_value:
+      then:
+        - script.execute: reset_goodwe_modbus_watchdog
+    unit_of_measurement: "A"
+    accuracy_decimals: 1
+    filters:
+      - multiply: 0.1
+
+  - platform: modbus_controller
+    modbus_controller_id: goodwe
+    id: output_power
+    name: "GoodWe Output Power"
+    web_server:
+      sorting_weight: 24
+    register_type: holding
+    address: 563
+    value_type: U_WORD
+    on_value:
+      then:
+        - script.execute: reset_goodwe_modbus_watchdog
+    unit_of_measurement: "W"
+
+  - platform: modbus_controller
+    modbus_controller_id: goodwe
+    id: today_energy
+    name: "GoodWe Today Energy"
+    web_server:
+      sorting_weight: 25
+    register_type: holding
+    address: 566
+    value_type: U_WORD
+    on_value:
+      then:
+        - script.execute: reset_goodwe_modbus_watchdog
+    unit_of_measurement: "kWh"
+    accuracy_decimals: 1
+    filters:
+      - multiply: 0.1
+
+  - platform: modbus_controller
+    modbus_controller_id: goodwe
+    id: total_energy
+    name: "GoodWe Total Energy"
+    web_server:
+      sorting_weight: 26
+    register_type: holding
+    address: 546
+    value_type: U_DWORD
+    on_value:
+      then:
+        - script.execute: reset_goodwe_modbus_watchdog
+    unit_of_measurement: "kWh"
+    accuracy_decimals: 1
+    filters:
+      - multiply: 0.1
+
+  - platform: modbus_controller
+    modbus_controller_id: goodwe
+    id: runtime_hours
+    name: "GoodWe Runtime"
+    web_server:
+      sorting_weight: 27
+    register_type: holding
+    address: 548
+    value_type: U_DWORD
+    on_value:
+      then:
+        - script.execute: reset_goodwe_modbus_watchdog
+    unit_of_measurement: "h"
+
+  - platform: modbus_controller
+    modbus_controller_id: goodwe
+    id: inverter_temperature
+    name: "GoodWe Inverter Temperature"
+    web_server:
+      sorting_weight: 28
+    register_type: holding
+    address: 565
+    value_type: U_WORD
+    on_value:
+      then:
+        - script.execute: reset_goodwe_modbus_watchdog
+    unit_of_measurement: "°C"
+    device_class: temperature
+    state_class: measurement
+    filters:
+      - multiply: 0.1
+
+  - platform: modbus_controller
+    modbus_controller_id: goodwe
+    id: grid_frequency
+    name: "GoodWe Grid Frequency"
+    web_server:
+      sorting_weight: 29
+    register_type: holding
+    address: 560
+    value_type: U_WORD
+    on_value:
+      then:
+        - script.execute: reset_goodwe_modbus_watchdog
+    unit_of_measurement: "Hz"
+    accuracy_decimals: 2
+    filters:
+      - multiply: 0.01
+
+  - platform: wifi_signal
+    name: "WiFi RSSI"
+    web_server:
+      sorting_weight: 92
+    update_interval: 60s
+    entity_category: diagnostic
+
+binary_sensor:
+  - platform: status
+    id: esp_online
+    name: "ESP Online"
+    web_server:
+      sorting_weight: 90
+  - platform: template
+    id: wifi_connected
+    name: "WiFi Connected"
+    web_server:
+      sorting_weight: 93
+    lambda: |-
+      return WiFi.isConnected();
+  - platform: template
+    id: modbus_online
+    name: "Modbus Online"
+    web_server:
+      sorting_weight: 94
+    lambda: |-
+      return id(last_goodwe_modbus_response) != 0 && millis() - id(last_goodwe_modbus_response) <= 30000;
+
+button:
+  - platform: restart
+    name: "Herstart ESP"
+    web_server:
+      sorting_weight: 100
+
+text_sensor:
+  - platform: template
+    name: "Gateway Health"
+    web_server:
+      sorting_weight: 1
+    update_interval: 1s
+    lambda: |-
+      if (!id(modbus_online).state) return {"Offline"};
+      if (id(esp_online).state && id(wifi_connected).state && id(api_client_connected) && id(modbus_online).state) return {"Healthy"};
+      return {"Warning"};
+
+  - platform: template
+    name: "Inverter Status"
+    web_server:
+      sorting_weight: 2
+    id: inverter_status
+    update_interval: 1s
+    lambda: |-
+      if (id(last_goodwe_modbus_response) == 0 || millis() - id(last_goodwe_modbus_response) > 30000) return {"Offline"};
+      if (id(work_mode).state == 0) return {"Waiting"};
+      if (id(work_mode).state == 1) return {"Running"};
+      if (id(work_mode).state == 2) return {"Fault"};
+      return {"Offline"};
+
+  - platform: modbus_controller
+    modbus_controller_id: goodwe
+    id: device_type
+    name: "GoodWe Device Type"
+    web_server:
+      sorting_weight: 3
+    register_type: holding
+    address: 528
+    register_count: 5
+    response_size: 10
+    force_new_range: true
+    raw_encode: ANSI
+    on_value:
+      then:
+        - script.execute: reset_goodwe_modbus_watchdog
+
+  - platform: modbus_controller
+    modbus_controller_id: goodwe
+    id: serial_number
+    name: "GoodWe Serial Number"
+    web_server:
+      sorting_weight: 4
+    register_type: holding
+    address: 512
+    register_count: 8
+    response_size: 16
+    force_new_range: true
+    raw_encode: ANSI
+    on_value:
+      then:
+        - script.execute: reset_goodwe_modbus_watchdog
+
+  - platform: template
+    name: "WiFi Status"
+    web_server:
+      sorting_weight: 5
+    update_interval: 1s
+    lambda: |-
+      if (WiFi.isConnected()) return {"Connected"};
+      return {"Disconnected"};
+
+  - platform: template
+    name: "API Status"
+    web_server:
+      sorting_weight: 6
+    update_interval: 1s
+    lambda: |-
+      if (id(api_client_connected)) return {"Connected"};
+      return {"Disconnected"};
+
+  - platform: template
+    name: "Modbus Status"
+    web_server:
+      sorting_weight: 7
+    update_interval: 1s
+    lambda: |-
+      if (id(last_goodwe_modbus_response) != 0 && millis() - id(last_goodwe_modbus_response) <= 30000) return {"Online"};
+      return {"Offline"};
+
+  - platform: template
+    name: "Last Modbus Update"
+    web_server:
+      sorting_weight: 8
+    update_interval: 1s
+    lambda: |-
+      if (id(last_goodwe_modbus_response) == 0) return {"Never"};
+      char buffer[24];
+      snprintf(buffer, sizeof(buffer), "%lu s ago", (unsigned long) ((millis() - id(last_goodwe_modbus_response)) / 1000));
+      return {buffer};
+
+  - platform: template
+    name: "Software Version"
+    web_server:
+      sorting_weight: 9
+    lambda: |-
+      return {"4.7.1"};
+
+  - platform: template
+    name: "Build Date"
+    web_server:
+      sorting_weight: 10
+    entity_category: diagnostic
+    lambda: |-
+      return {"2026-07-20"};
+
+  - platform: template
+    name: "ESP Uptime"
+    web_server:
+      sorting_weight: 91
+    update_interval: 60s
+    lambda: |-
+      uint32_t total_seconds = millis() / 1000;
+      uint32_t days = total_seconds / 86400;
+      uint32_t hours = (total_seconds % 86400) / 3600;
+      uint32_t minutes = (total_seconds % 3600) / 60;
+      uint32_t seconds = total_seconds % 60;
+      char buffer[32];
+      if (days > 0) {
+        snprintf(buffer, sizeof(buffer), "%lu d %lu h", (unsigned long) days, (unsigned long) hours);
+      } else if (hours > 0) {
+        snprintf(buffer, sizeof(buffer), "%lu h %lu min", (unsigned long) hours, (unsigned long) minutes);
+      } else if (minutes > 0) {
+        snprintf(buffer, sizeof(buffer), "%lu min", (unsigned long) minutes);
+      } else {
+        snprintf(buffer, sizeof(buffer), "%lu s", (unsigned long) seconds);
+      }
+      return {buffer};
